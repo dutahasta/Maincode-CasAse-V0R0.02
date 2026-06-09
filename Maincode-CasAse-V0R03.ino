@@ -8,7 +8,8 @@
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <PZEM6L24.h>
+#define PZEM_6L24
+#include <PZEMPlus.h>
 
 // ================= ADS1115 =================
 #define ADS_CH    1
@@ -81,6 +82,7 @@ int16_t readADS1115Stable(uint8_t ch)
 
   return raw;
 }
+
 
 // ======================================
 float readCPVoltage()
@@ -490,12 +492,12 @@ void loop()
   Serial.print(acCurrent,2);
   Serial.print(" A | "); 
   
-  Serial.print(acPower,1);
-  Serial.print(" W | ");
+  Serial.print(acPower / 1000.0, 1);
+  Serial.print(" kW | ");
   
-  Serial.print(acEnergy,3);
+  Serial.print(acEnergy,1);
   Serial.print(" kWh | ");
-  
+
   Serial.print("CP Voltage: ");
   Serial.print(cpVoltage, 3);
   Serial.print(" V | ");

@@ -3,7 +3,8 @@
 
 #include <Arduino.h>
 #include <HardwareSerial.h>
-#include <PZEM6L24.h>
+#define PZEM_6L24
+#include <PZEMPlus.h>
 #include "config.h"
 
 extern HardwareSerial pzemSerial;
@@ -13,84 +14,100 @@ extern float acCurrent;
 extern float acPower;
 extern float acEnergy;
 
+// Phase C pada PZEM 3 fasa = index 2 (R=0, S=1, C=2)
+#define PZEM_PHASE_C    2
+#define PZEM_READ_DELAY 100
+
 inline void initPzem()
 {
   pzem.begin(9600);
   pzem.setEnable(PZEM_DE);
 }
 
-inline float readCurrentAverage()
-{
-  float total = 0.0;
-  uint8_t valid = 0;
-
-  // phase C = 2
-  for (int i = 0; i < 10; i++)
-  {
-    float c = pzem.readCurrent(2);
-
-    if (!isnan(c))
-    {
-      total += c;
-      valid++;
-    }
-
-    delay(10);
-  }
-
-  if (valid == 0)
-    return 0;
-
-  float avg = total / valid;
-  avg *= 0.82; // calibration
-
-  if (avg < 0.02)
-    avg = 0;
-
-  return avg;
-}
-
-inline float readPowerAverage()
-{
-  float total = 0.0;
-  uint8_t valid = 0;
-
-  // phase C = 2, ambil 5 sample untuk power
-  for (int i = 0; i < 5; i++)
-  {
-    float p = pzem.readActivePower(2);
-
-    if (!isnan(p) && p >= 0)
-    {
-      total += p;
-      valid++;
-    }
-
-    delay(20);
-  }
-
-  if (valid == 0)
-    return acPower; // Return last valid value
-
-  float avg = total / valid;
-  return avg;
-}
-
+// ============================================================
+// READ PZEM PHASE C (port dari test 3-fasa, single phase)
+//  - NaN / nilai tidak valid  -> pertahankan nilai terakhir
+//  - power dibuat absolut, tolak data corrupt (> V*I*1.5)
+//  - noise power < 3W         -> 0
+//  - energy tidak boleh turun
+// ============================================================
 inline void updatePzemMeasurements()
 {
-  float v = pzem.readVoltage(2);
+  static float lastVoltage = 0;
+  static float lastCurrent = 0;
+  static float lastPower   = 0;
+  static float lastEnergy  = 0;
+
+  // VOLTAGE
+  float v = pzem.readVoltage(PZEM_PHASE_C);
+  delay(PZEM_READ_DELAY);
+
+  // CURRENT
+  float c = pzem.readCurrent(PZEM_PHASE_C);
+  delay(PZEM_READ_DELAY);
+
+  // POWER
+  float p = pzem.readActivePower(PZEM_PHASE_C);
+  delay(PZEM_READ_DELAY);
+
+  // ENERGY
+  float e = pzem.readActiveEnergy(PZEM_PHASE_C);
+  delay(PZEM_READ_DELAY);
+
+  // =========================
+  // FILTER VOLTAGE
+  // =========================
   if (!isnan(v) && v > 0)
-    acVoltage = v;
+  {
+    lastVoltage = v;
+  }
 
-  acCurrent = readCurrentAverage();
+  // =========================
+  // FILTER CURRENT
+  // =========================
+  if (!isnan(c) && c >= 0)
+  {
+    lastCurrent = c;
+  }
 
-  // Use averaged power reading for stability
-  float p = readPowerAverage();
-  acPower = p;
+  // =========================
+  // FILTER POWER
+  // =========================
+  if (!isnan(p))
+  {
+    p = fabsf(p);
 
-  float e = pzem.readActiveEnergy(2);
-  if (!isnan(e) && e >= 0)
-    acEnergy = e;
+    float expectedPower = lastVoltage * lastCurrent;
+
+    // reject data corrupt
+    if (p <= (expectedPower * 1.5f))
+    {
+      lastPower = p;
+    }
+
+    // noise kecil
+    if (lastPower < 3.0f)
+    {
+      lastPower = 0;
+    }
+  }
+
+  // =========================
+  // FILTER ENERGY
+  // ========================= 
+  if (!isnan(e))
+  {
+    if (e >= lastEnergy)
+    {
+      lastEnergy = e;
+    }
+  }
+
+  // SAVE FINAL
+  acVoltage = lastVoltage;
+  acCurrent = lastCurrent;
+  acPower   = lastPower;
+  acEnergy  = lastEnergy;
 }
 
 #endif // METER_VALUE_H

@@ -55,11 +55,11 @@ typedef struct {
     uint8_t  messageType;                                              // Byte 4
     uint8_t  sourceId;                                                 // Byte 5
     uint8_t  destinationId;                                            // Byte 6
-    char     chargerBoxSerial[HUB1_CHARGER_BOX_SERIAL_SIZE];          // Bytes 7-14
-    char     chargerPointModel[HUB1_CHARGER_POINT_MODEL_SIZE];        // Bytes 15-22
-    char     chargerPointSerial[HUB1_CHARGER_POINT_SERIAL_SIZE];      // Bytes 23-30
-    char     chargerPointVendor[HUB1_CHARGER_POINT_VENDOR_SIZE];      // Bytes 31-38
-    char     firmwareVersion[HUB1_FIRMWARE_VERSION_SIZE];             // Bytes 39-54
+    char     chargerBoxSerial[HUB1_CHARGER_BOX_SERIAL_SIZE];           // Bytes 7-14
+    char     chargerPointModel[HUB1_CHARGER_POINT_MODEL_SIZE];         // Bytes 15-22
+    char     chargerPointSerial[HUB1_CHARGER_POINT_SERIAL_SIZE];       // Bytes 23-30
+    char     chargerPointVendor[HUB1_CHARGER_POINT_VENDOR_SIZE];       // Bytes 31-38
+    char     firmwareVersion[HUB1_FIRMWARE_VERSION_SIZE];              // Bytes 39-54
     uint8_t  connectorId;                                              // Byte 55
     uint8_t  transactionId[6];                                         // Bytes 56-61
     uint32_t energy;                                                   // Bytes 62-65 (Wh)
@@ -125,12 +125,12 @@ static inline void hub1_serializePacket(const MeterValuePacket_t *packet, uint8_
  */
 static inline void hub1_initMeterPacket(MeterValuePacket_t *packet)
 {
-    packet->header[0]      = HUB1_HEADER_BYTE1;
-    packet->header[1]      = HUB1_HEADER_BYTE2;
-    packet->length         = HUB1_PACKET_SIZE - 4;
-    packet->messageType    = HUB1_MESSAGE_TYPE_METER;
-    packet->sourceId       = HUB1_SOURCE_ID;
-    packet->destinationId  = HUB1_DESTINATION_ID;
+    packet->header[0]     = HUB1_HEADER_BYTE1;
+    packet->header[1]     = HUB1_HEADER_BYTE2;
+    packet->length        = HUB1_PACKET_SIZE - 4;
+    packet->messageType   = HUB1_MESSAGE_TYPE_METER;
+    packet->sourceId      = HUB1_SOURCE_ID;
+    packet->destinationId = HUB1_DESTINATION_ID;
     memset(packet->chargerBoxSerial,   ' ', HUB1_CHARGER_BOX_SERIAL_SIZE);
     memset(packet->chargerPointModel,  ' ', HUB1_CHARGER_POINT_MODEL_SIZE);
     memset(packet->chargerPointSerial, ' ', HUB1_CHARGER_POINT_SERIAL_SIZE);
